@@ -28,7 +28,7 @@
 
   {% if site.analytics.cloudflare_token and site.analytics.cloudflare_token != "" %}
   <!-- Cloudflare Web Analytics — privacy-friendly, no cookies -->
-  <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "{{ site.analytics.cloudflare_token }}"}'></script>
+  <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "{{ site.analytics.cloudflare_token }}"}'></script>
   {% endif %}
 </head>
 <body>
