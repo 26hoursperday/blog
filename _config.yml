@@ -18,7 +18,7 @@ email: "twentysix.hrsperday@gmail.com"
 # Cloudflare DNS — a JS beacon token works standalone).
 # Leave blank to disable analytics entirely.
 analytics:
-  cloudflare_token: ""
+  cloudflare_token: "6a74e52e3bfd40a1aa5a06451fd5977f"
 
 # ============================================================
 # Build Settings
