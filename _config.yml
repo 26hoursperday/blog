@@ -1,0 +1,86 @@
+# ============================================================
+# Site Settings
+# ============================================================
+title: "My Blog"
+tagline: "Thoughts on tech, life, and everything in between"
+description: "A personal blog built with Jekyll and hosted on GitHub Pages."
+url: "https://yourusername.github.io"       # Base URL of your site (no trailing slash)
+baseurl: ""                                   # Subpath if repo is not username.github.io (e.g. "/my-blog")
+author: "26hoursperday"
+email: "you@example.com"
+
+# ============================================================
+# Analytics
+# ============================================================
+# Cloudflare Web Analytics (privacy-friendly, no cookies, free).
+# Get a token at https://dash.cloudflare.com/?to=/:account/web-analytics
+# (choose "I do not have a website" / manual snippet if not using
+# Cloudflare DNS — a JS beacon token works standalone).
+# Leave blank to disable analytics entirely.
+analytics:
+  cloudflare_token: ""
+
+# ============================================================
+# Build Settings
+# ============================================================
+markdown: kramdown
+highlighter: rouge
+permalink: /:categories/:year/:month/:day/:title/
+
+kramdown:
+  input: GFM              # GitHub Flavored Markdown
+  syntax_highlighter: rouge
+
+collections:
+  categories:
+    output: true
+
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+  - jekyll-archives
+
+# jekyll-archives: auto-generates /categories/:name/ and /tags/:name/ pages
+jekyll-archives:
+  enabled:
+    - categories
+    - tags
+  layouts:
+    category: category
+    tag: tag
+  permalinks:
+    category: '/categories/:name/'
+    tag: '/tags/:name/'
+
+# ============================================================
+# Pagination (built-in Jekyll 4 paginate_v2 alternative: jekyll-paginate)
+# ============================================================
+paginate: 10
+paginate_path: "/page:num/"
+
+# ============================================================
+# Defaults — applied automatically to every post/page front matter
+# ============================================================
+defaults:
+  - scope:
+      path: "_posts"
+      type: "posts"
+    values:
+      layout: "post"
+      author: "26hoursperday"
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "page"
+
+# ============================================================
+# Files/folders to exclude from the generated site
+# ============================================================
+exclude:
+  - README.md
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor

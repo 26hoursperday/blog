@@ -1,0 +1,18 @@
+---
+layout: default
+---
+{% assign cat_data = site.data.categories[page.title] %}
+
+<section class="archive">
+  <header class="archive-header">
+    <h1>{% if cat_data %}{{ cat_data.name }}{% else %}{{ page.title }}{% endif %}</h1>
+    {% if cat_data %}<p class="archive-description">{{ cat_data.description }}</p>{% endif %}
+    <p class="archive-count">{{ page.posts.size }} post{% if page.posts.size != 1 %}s{% endif %}</p>
+  </header>
+
+  <div class="post-list">
+    {% for post in page.posts %}
+      {% include post-card.html post=post %}
+    {% endfor %}
+  </div>
+</section>

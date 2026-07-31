@@ -1,0 +1,19 @@
+---
+layout: default
+title: Categories
+permalink: /categories/
+---
+
+<section class="archive-index">
+  <h1>Categories</h1>
+  <ul class="category-list">
+    {% for cat in site.data.categories %}
+      {% assign key = cat[0] %}
+      {% assign info = cat[1] %}
+      <li>
+        <a href="{{ '/categories/' | append: key | relative_url }}/">{{ info.name }}</a>
+        <p>{{ info.description }}</p>
+      </li>
+    {% endfor %}
+  </ul>
+</section>

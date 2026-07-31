@@ -1,0 +1,35 @@
+---
+layout: default
+---
+<article class="post">
+  <header class="post-header">
+    <h1 class="post-title">{{ page.title }}</h1>
+    <p class="post-meta">
+      <time datetime="{{ page.date | date_to_xmlschema }}">
+        {{ page.date | date: "%B %-d, %Y" }}
+      </time>
+      {% if page.author %} · {{ page.author }}{% endif %}
+    </p>
+
+    {% if page.categories.size > 0 %}
+      <p class="post-categories">
+        {% for category in page.categories %}
+          <a href="{{ '/categories/' | append: category | relative_url }}/" class="category-pill">{{ category }}</a>
+        {% endfor %}
+      </p>
+    {% endif %}
+  </header>
+
+  <div class="post-content">
+    {{ content }}
+  </div>
+
+  {% if page.tags.size > 0 %}
+    <footer class="post-tags">
+      Tags:
+      {% for tag in page.tags %}
+        <a class="tag-pill" href="{{ '/tags/' | append: tag | relative_url }}/">#{{ tag }}</a>
+      {% endfor %}
+    </footer>
+  {% endif %}
+</article>

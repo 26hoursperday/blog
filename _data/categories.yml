@@ -1,0 +1,7 @@
+# Define every top-level category used across the blog here.
+# Keep this list short and stable — categories are the "big buckets";
+# use tags in each post's front matter for finer-grained, flexible keywords.
+
+life:
+  name: "Life"
+  description: "Personal reflections and everyday experiences."

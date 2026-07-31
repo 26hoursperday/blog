@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Matrix Multiplication Visualizer</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#1e293b; --accent:#38bdf8; --accent2:#f472b6;
+    --a-cell:#0ea5e9; --b-cell:#ec4899; --c-cell:#22c55e; --text:#e2e8f0;
+  }
+  *{box-sizing:border-box; font-family:'Segoe UI',system-ui,sans-serif;}
+  body{margin:0; background:linear-gradient(135deg,#0f172a,#1e1b4b); color:var(--text); padding:24px;}
+  h1{text-align:center; font-weight:600; margin:0 0 4px; font-size:1.6rem;}
+  .subtitle{text-align:center; color:#94a3b8; margin-bottom:20px; font-size:.9rem;}
+
+  .controls{
+    display:flex; flex-wrap:wrap; gap:16px; justify-content:center; align-items:center;
+    background:var(--panel); padding:16px 20px; border-radius:14px; margin:0 auto 24px;
+    max-width:900px; box-shadow:0 8px 24px rgba(0,0,0,.3);
+  }
+  .ctrl{display:flex; flex-direction:column; gap:4px; font-size:.8rem; color:#cbd5e1;}
+  .ctrl input[type=number]{
+    width:70px; padding:6px 8px; border-radius:8px; border:1px solid #334155;
+    background:#0f172a; color:var(--text); font-size:.95rem; text-align:center;
+  }
+  button{
+    padding:9px 18px; border:none; border-radius:10px; cursor:pointer;
+    font-size:.9rem; font-weight:600; transition:.2s; color:#0f172a;
+  }
+  .btn-play{background:var(--accent);}
+  .btn-step{background:#a78bfa;}
+  .btn-reset{background:#f87171;}
+  .btn-rand{background:#fbbf24;}
+  button:hover{transform:translateY(-2px); filter:brightness(1.1);}
+  button:disabled{opacity:.4; cursor:not-allowed; transform:none;}
+
+  .speed{display:flex; align-items:center; gap:8px; font-size:.8rem; color:#cbd5e1;}
+
+  .stage{
+    display:flex; flex-wrap:wrap; gap:26px; justify-content:center; align-items:center;
+    margin-bottom:24px;
+  }
+  .matrix-wrap{text-align:center;}
+  .matrix-label{margin-bottom:8px; font-weight:600; font-size:1rem;}
+  .matrix-label .dim{color:#94a3b8; font-weight:400; font-size:.8rem;}
+  .op{font-size:2rem; color:#94a3b8; align-self:center; margin-top:20px;}
+
+  table{border-collapse:separate; border-spacing:4px; margin:0 auto;}
+  td{
+    width:46px; height:46px; text-align:center; vertical-align:middle;
+    background:#334155; border-radius:8px; font-size:.95rem; font-weight:600;
+    transition:background .25s, transform .25s, box-shadow .25s;
+  }
+  td.hl-row{background:var(--a-cell); color:#fff; box-shadow:0 0 12px var(--a-cell);}
+  td.hl-col{background:var(--b-cell); color:#fff; box-shadow:0 0 12px var(--b-cell);}
+  td.hl-active{transform:scale(1.15);}
+  td.c-empty{background:#1e293b; color:#475569;}
+  td.c-done{background:var(--c-cell); color:#0f172a; box-shadow:0 0 12px var(--c-cell);}
+  td.c-target{outline:3px dashed var(--accent); outline-offset:2px;}
+
+  .explain{
+    max-width:760px; margin:0 auto; background:var(--panel); border-radius:14px;
+    padding:18px 22px; box-shadow:0 8px 24px rgba(0,0,0,.3); min-height:60px;
+  }
+  .explain .formula{font-size:1.05rem; line-height:1.9; color:#f1f5f9;}
+  .explain .formula b.a{color:var(--accent);}
+  .explain .formula b.b{color:var(--accent2);}
+  .explain .formula b.c{color:#4ade80;}
+  .status{color:#94a3b8; font-size:.85rem; margin-top:8px;}
+  .error{color:#f87171; text-align:center; font-weight:600; margin-bottom:16px;}
+</style>
+</head>
+<body>
+  <h1>🧮 Matrix Multiplication Visualizer</h1>
+  <div class="subtitle">Watch how each output cell is the dot product of a row from A and a column from B.</div>
+
+  <div class="controls">
+    <div class="ctrl">Matrix A rows
+      <input type="number" id="aRows" value="2" min="1" max="6">
+    </div>
+    <div class="ctrl">A cols / B rows
+      <input type="number" id="aCols" value="3" min="1" max="6">
+    </div>
+    <div class="ctrl">Matrix B cols
+      <input type="number" id="bCols" value="2" min="1" max="6">
+    </div>
+    <button class="btn-rand" onclick="randomize()">🎲 Randomize</button>
+    <button class="btn-play" id="playBtn" onclick="togglePlay()">▶ Play</button>
+    <button class="btn-step" onclick="step()">⏭ Step</button>
+    <button class="btn-reset" onclick="resetAnim()">⟲ Reset</button>
+    <div class="speed">Speed
+      <input type="range" id="speed" min="200" max="1600" value="900" step="100" style="direction:rtl;">
+    </div>
+  </div>
+
+  <div id="errorMsg" class="error"></div>
+
+  <div class="stage">
+    <div class="matrix-wrap">
+      <div class="matrix-label">A <span class="dim" id="aDim"></span></div>
+      <table id="matA"></table>
+    </div>
+    <div class="op">×</div>
+    <div class="matrix-wrap">
+      <div class="matrix-label">B <span class="dim" id="bDim"></span></div>
+      <table id="matB"></table>
+    </div>
+    <div class="op">=</div>
+    <div class="matrix-wrap">
+      <div class="matrix-label">C <span class="dim" id="cDim"></span></div>
+      <table id="matC"></table>
+    </div>
+  </div>
+
+  <div class="explain">
+    <div class="formula" id="formula">Press <b>Play</b> or <b>Step</b> to begin the animation.</div>
+    <div class="status" id="status"></div>
+  </div>
+
+<script>
+let A=[], B=[], C=[];
+let aRows, aCols, bCols;
+let ci=0, cj=0, k=0;        // current output row, col, and dot-product index
+let running=false, timer=null;
+
+function rand(){ return Math.floor(Math.random()*9)+1; }
+
+function buildMatrices(){
+  aRows = clamp(+document.getElementById('aRows').value);
+  aCols = clamp(+document.getElementById('aCols').value);
+  bCols = clamp(+document.getElementById('bCols').value);
+
+  A = Array.from({length:aRows},()=>Array.from({length:aCols},rand));
+  B = Array.from({length:aCols},()=>Array.from({length:bCols},rand));
+  C = Array.from({length:aRows},()=>Array.from({length:bCols},()=>null));
+  resetAnim(false);
+  render();
+}
+
+function clamp(v){ return Math.max(1, Math.min(6, v||1)); }
+
+function render(){
+  document.getElementById('aDim').textContent = `(${aRows}×${aCols})`;
+  document.getElementById('bDim').textContent = `(${aCols}×${bCols})`;
+  document.getElementById('cDim').textContent = `(${aRows}×${bCols})`;
+  drawTable('matA', A);
+  drawTable('matB', B);
+  drawTableC('matC', C);
+  highlight();
+}
+
+function drawTable(id, m){
+  const t=document.getElementById(id); t.innerHTML='';
+  m.forEach((row,r)=>{
+    const tr=t.insertRow();
+    row.forEach((val,c)=>{
+      const td=tr.insertCell(); td.textContent=val;
+      td.id = id+'_'+r+'_'+c;
+    });
+  });
+}
+function drawTableC(id, m){
+  const t=document.getElementById(id); t.innerHTML='';
+  m.forEach((row,r)=>{
+    const tr=t.insertRow();
+    row.forEach((val,c)=>{
+      const td=tr.insertCell();
+      td.id = id+'_'+r+'_'+c;
+      if(val===null){ td.textContent='?'; td.className='c-empty'; }
+      else { td.textContent=val; td.className='c-done'; }
+    });
+  });
+}
+
+function clearHl(){
+  document.querySelectorAll('td').forEach(td=>{
+    td.classList.remove('hl-row','hl-col','hl-active','c-target');
+  });
+}
+
+function highlight(){
+  clearHl();
+  if(ci>=aRows) return; // finished
+  // highlight current row of A
+  for(let c=0;c<aCols;c++){
+    const cell=document.getElementById('matA_'+ci+'_'+c);
+    if(cell){ cell.classList.add('hl-row'); if(c===k) cell.classList.add('hl-active'); }
+  }
+  // highlight current col of B
+  for(let r=0;r<aCols;r++){
+    const cell=document.getElementById('matB_'+r+'_'+cj);
+    if(cell){ cell.classList.add('hl-col'); if(r===k) cell.classList.add('hl-active'); }
+  }
+  // target C cell
+  const tc=document.getElementById('matC_'+ci+'_'+cj);
+  if(tc && C[ci][cj]===null) tc.classList.add('c-target');
+}
+
+let runningSum=0;
+function step(){
+  if(ci>=aRows){ finishMsg(); return; }
+
+  if(k===0) runningSum=0;
+
+  const aVal=A[ci][k], bVal=B[k][cj];
+  runningSum += aVal*bVal;
+
+  // build formula text
+  let terms=[];
+  for(let x=0;x<aCols;x++){
+    const a=A[ci][x], b=B[x][cj];
+    if(x<=k) terms.push(`<b class="a">${a}</b>×<b class="b">${b}</b>`);
+    else terms.push(`<span style="color:#475569">${a}×${b}</span>`);
+  }
+  document.getElementById('formula').innerHTML =
+    `C[<b class="c">${ci+1}</b>][<b class="c">${cj+1}</b>] = ` + terms.join(' + ') +
+    (k===aCols-1 ? ` = <b class="c">${runningSum}</b>` : ` = ... (${runningSum} so far)`);
+  document.getElementById('status').textContent =
+    `Multiplying row ${ci+1} of A with column ${cj+1} of B — term ${k+1} of ${aCols}.`;
+
+  highlight();
+
+  k++;
+  if(k>=aCols){
+    C[ci][cj]=runningSum;      // commit result
+    k=0;
+    cj++;
+    if(cj>=bCols){ cj=0; ci++; }
+  }
+  drawTableC('matC', C);
+  highlight();
+
+  if(ci>=aRows){ setTimeout(finishMsg,50); stopPlay(); }
+}
+
+function finishMsg(){
+  clearHl();
+  document.getElementById('formula').innerHTML = '✅ Done! Matrix <b class="c">C = A × B</b> is fully computed.';
+  document.getElementById('status').textContent = 'Every cell = dot product of an A-row and a B-column.';
+}
+
+function togglePlay(){ running ? stopPlay() : startPlay(); }
+function startPlay(){
+  if(ci>=aRows) resetAnim(false);
+  running=true; document.getElementById('playBtn').textContent='⏸ Pause';
+  const spd=+document.getElementById('speed').value;
+  timer=setInterval(()=>{ if(ci>=aRows){stopPlay();return;} step(); }, spd);
+}
+function stopPlay(){
+  running=false; document.getElementById('playBtn').textContent='▶ Play';
+  clearInterval(timer);
+}
+function resetAnim(redraw=true){
+  stopPlay();
+  ci=0; cj=0; k=0; runningSum=0;
+  C = Array.from({length:aRows},()=>Array.from({length:bCols},()=>null));
+  document.getElementById('formula').innerHTML='Press <b>Play</b> or <b>Step</b> to begin the animation.';
+  document.getElementById('status').textContent='';
+  if(redraw) render();
+}
+function randomize(){ buildMatrices(); }
+
+// rebuild whenever a size changes
+['aRows','aCols','bCols'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', buildMatrices);
+});
+
+buildMatrices();
+</script>
+</body>
+</html>

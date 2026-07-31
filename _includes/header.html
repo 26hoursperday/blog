@@ -1,0 +1,18 @@
+<header class="site-header">
+  <div class="wrapper">
+    <a class="site-title" href="{{ '/' | relative_url }}">{{ site.title }}</a>
+
+    <nav class="site-nav">
+      {% for item in site.data.navigation %}
+        <a class="nav-link" href="{{ item.url | relative_url }}">{{ item.title }}</a>
+      {% endfor %}
+    </nav>
+
+    {% include search-box.html %}
+
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">
+      <span class="icon-light">🌙</span>
+      <span class="icon-dark">☀️</span>
+    </button>
+  </div>
+</header>
