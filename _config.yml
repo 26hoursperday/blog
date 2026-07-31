@@ -4,10 +4,10 @@
 title: "My Blog"
 tagline: "Thoughts on tech, life, and everything in between"
 description: "A personal blog built with Jekyll and hosted on GitHub Pages."
-url: "https://yourusername.github.io"       # Base URL of your site (no trailing slash)
-baseurl: ""                                   # Subpath if repo is not username.github.io (e.g. "/my-blog")
+url: "https://26hoursperday.github.io"       # Base URL of your site (no trailing slash)
+baseurl: "blog"                                   # Subpath if repo is not username.github.io (e.g. "/my-blog")
 author: "26hoursperday"
-email: "you@example.com"
+email: "twentysix.hrsperday@gmail.com"
 
 # ============================================================
 # Analytics
