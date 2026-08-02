@@ -5,3 +5,7 @@
 life:
   name: "Life"
   description: "Personal reflections and everyday experiences."
+
+tech:
+  name: "Tech"
+  description: "Every day learning about the latest and most exciting technological innovations."

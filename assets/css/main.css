@@ -177,6 +177,11 @@ html[data-theme="dark"] .theme-toggle .icon-dark { display: inline; }
 .post-content pre code, .page-content pre code { background: none; padding: 0; }
 .post-content table, .page-content table { border-collapse: collapse; width: 100%; }
 .post-content th, .post-content td, .page-content th, .page-content td { border: 1px solid var(--color-border); padding: 0.5rem 0.75rem; text-align: left; }
+.post-image {
+    width: 100%;
+    max-width: 600px;
+    height: auto;
+}
 
 /* ==========================================================
    Archive (category / tag) pages

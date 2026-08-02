@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How AES Work</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#12141c;
+    --panel:#191c26;
+    --panel2:#1f2330;
+    --border:#2b2f40;
+    --text:#e9e7e0;
+    --text-dim:#9a9db0;
+    --sub:#e0a458;
+    --shift:#5aa9a3;
+    --mix:#b76e79;
+    --ark:#7c93c9;
+    --good:#7fbf8f;
+    --mono:'IBM Plex Mono', monospace;
+    --sans:'IBM Plex Sans', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 15% 0%, rgba(124,147,201,0.08), transparent 40%),
+      radial-gradient(circle at 85% 100%, rgba(224,164,88,0.06), transparent 45%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    line-height:1.5;
+    padding:32px 20px 80px;
+  }
+  .wrap{max-width:1080px;margin:0 auto;}
+  header{margin-bottom:32px;}
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    margin-bottom:10px;
+  }
+  h1{
+    font-family:var(--sans);
+    font-weight:600;
+    font-size:clamp(28px,4vw,40px);
+    margin:0 0 10px;
+    letter-spacing:-0.01em;
+  }
+  header p{
+    color:var(--text-dim);
+    max-width:640px;
+    font-size:15px;
+    margin:0;
+  }
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:22px 24px;
+    margin-bottom:22px;
+  }
+  .panel h2{
+    font-size:13px;
+    text-transform:uppercase;
+    letter-spacing:0.1em;
+    color:var(--text-dim);
+    font-weight:600;
+    margin:0 0 16px;
+  }
+  .controls-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr auto;
+    gap:16px;
+    align-items:end;
+  }
+  @media (max-width:720px){.controls-grid{grid-template-columns:1fr;}}
+  label{
+    display:block;
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--text-dim);
+    margin-bottom:6px;
+    letter-spacing:0.04em;
+  }
+  input[type=text]{
+    width:100%;
+    background:var(--panel2);
+    border:1px solid var(--border);
+    color:var(--text);
+    font-family:var(--mono);
+    font-size:14px;
+    padding:9px 11px;
+    border-radius:8px;
+    letter-spacing:0.03em;
+  }
+  input[type=text]:focus{outline:2px solid var(--ark);outline-offset:1px;}
+  select{
+    background:var(--panel2);
+    border:1px solid var(--border);
+    color:var(--text);
+    font-family:var(--mono);
+    font-size:14px;
+    padding:9px 11px;
+    border-radius:8px;
+  }
+  .row-buttons{display:flex;gap:10px;flex-wrap:wrap;}
+  button{
+    font-family:var(--sans);
+    font-weight:600;
+    font-size:13px;
+    border:1px solid var(--border);
+    background:var(--panel2);
+    color:var(--text);
+    padding:10px 16px;
+    border-radius:8px;
+    cursor:pointer;
+    transition:transform .08s ease, border-color .15s ease;
+  }
+  button:hover{border-color:var(--ark);}
+  button:active{transform:scale(0.97);}
+  button.primary{background:var(--ark);border-color:var(--ark);color:#12141c;}
+  button:disabled{opacity:0.35;cursor:not-allowed;}
+  .err{color:#e08a8a;font-family:var(--mono);font-size:12px;margin-top:8px;min-height:16px;}
+
+  .stage{
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+    align-items:start;
+  }
+  .grids-row{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+  .grid-block{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+  }
+  .arrow-between{
+    font-size:28px;
+    color:var(--text-dim);
+    flex-shrink:0;
+    user-select:none;
+  }
+  .grid-label{
+    font-family:var(--mono);
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:0.1em;
+    color:var(--text-dim);
+    text-align:center;
+    padding:3px 10px;
+    background:var(--panel2);
+    border:1px solid var(--border);
+    border-radius:999px;
+    display:inline-block;
+  }
+  .grid-label.op-sub{ color:var(--sub); border-color:var(--sub); }
+  .grid-label.op-shift{ color:var(--shift); border-color:var(--shift); }
+  .grid-label.op-mix{ color:var(--mix); border-color:var(--mix); }
+  .grid-label.op-ark{ color:var(--ark); border-color:var(--ark); }
+  .grid4{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:7px;
+    width:234px;
+  }
+  .cell{
+    aspect-ratio:1;
+    background:var(--panel2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);
+    font-size:14px;
+    font-weight:600;
+    color:var(--text-dim);
+    transition:background .35s ease, border-color .35s ease, color .35s ease, transform .35s ease;
+  }
+  .cell.changed{color:var(--text);transform:scale(1.04);}
+  .cell.before-cell{color:var(--text-dim);background:rgba(255,255,255,0.025);}
+  .cell.op-sub{border-color:var(--sub);box-shadow:0 0 0 1px var(--sub) inset;}
+  .cell.op-shift{border-color:var(--shift);box-shadow:0 0 0 1px var(--shift) inset;}
+  .cell.op-mix{border-color:var(--mix);box-shadow:0 0 0 1px var(--mix) inset;}
+  .cell.op-ark{border-color:var(--ark);box-shadow:0 0 0 1px var(--ark) inset;}
+
+  .grid-caption{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--text-dim);
+    text-align:center;
+    margin-top:10px;
+  }
+
+  .step-panel{min-height:220px;}
+  .step-tag{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    padding:5px 10px;
+    border-radius:999px;
+    border:1px solid var(--border);
+    margin-bottom:14px;
+  }
+  .dot{width:8px;height:8px;border-radius:50%;}
+  .dot.sub{background:var(--sub);}
+  .dot.shift{background:var(--shift);}
+  .dot.mix{background:var(--mix);}
+  .dot.ark{background:var(--ark);}
+  .step-panel h3{margin:0 0 8px;font-size:19px;font-weight:600;}
+  .step-panel p{color:var(--text-dim);font-size:14.5px;margin:0 0 10px;}
+  .step-panel .math{
+    font-family:var(--mono);
+    font-size:12.5px;
+    background:var(--panel2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:10px 12px;
+    color:var(--text);
+    overflow-x:auto;
+    white-space:pre;
+  }
+
+  .timeline{
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+    margin-top:20px;
+  }
+  .tl-dot{
+    width:12px;height:12px;border-radius:50%;
+    background:var(--panel2);
+    border:1px solid var(--border);
+    cursor:pointer;
+  }
+  .tl-dot.done{background:var(--text-dim);}
+  .tl-dot.active{transform:scale(1.35);}
+  .tl-dot.sub{border-color:var(--sub);}
+  .tl-dot.shift{border-color:var(--shift);}
+  .tl-dot.mix{border-color:var(--mix);}
+  .tl-dot.ark{border-color:var(--ark);}
+  .tl-dot.init{border-color:var(--ark);}
+
+  .nav-row{display:flex;justify-content:space-between;align-items:center;margin-top:18px;flex-wrap:wrap;gap:10px;}
+  .progress-text{font-family:var(--mono);font-size:12px;color:var(--text-dim);}
+
+  .lab-toggle{
+    display:flex;justify-content:space-between;align-items:center;cursor:pointer;
+  }
+  .lab-body{display:none;margin-top:18px;}
+  .lab-body.open{display:block;}
+  .chev{transition:transform .2s ease;color:var(--text-dim);}
+  .chev.open{transform:rotate(90deg);}
+
+  .kv{
+    display:grid;
+    grid-template-columns:110px 1fr;
+    gap:6px 14px;
+    font-family:var(--mono);
+    font-size:13px;
+    margin:12px 0;
+  }
+  .kv div:nth-child(odd){color:var(--text-dim);}
+  .kv div:nth-child(even){word-break:break-all;}
+  .hexline{
+    background:var(--panel2);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:8px 10px;
+    letter-spacing:0.05em;
+  }
+  .hexline.match{border-color:var(--good);color:var(--good);}
+  .attack-steps{display:flex;flex-direction:column;gap:10px;margin:14px 0;}
+  .attack-step{
+    background:var(--panel2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:10px 12px;
+    font-family:var(--mono);
+    font-size:12.5px;
+    opacity:0.3;
+    transition:opacity .3s ease;
+  }
+  .attack-step.shown{opacity:1;}
+  .attack-step .lbl{color:var(--text-dim);display:block;margin-bottom:4px;font-family:var(--sans);font-size:11px;text-transform:uppercase;letter-spacing:0.06em;}
+  .verdict{
+    margin-top:16px;
+    padding:14px 16px;
+    border-radius:10px;
+    border:1px solid var(--good);
+    background:rgba(127,191,143,0.08);
+    font-size:14px;
+    display:none;
+    line-height:1.8;
+  }
+  .byte-progress{
+    display:flex;
+    gap:4px;
+    flex-wrap:wrap;
+    margin:10px 0;
+  }
+  .bp-cell{
+    width:32px; height:32px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-size:11px; font-weight:600;
+    border:1px solid var(--border);
+    border-radius:6px;
+    background:var(--panel2);
+    color:var(--text-dim);
+    transition: background .25s, border-color .25s, color .25s;
+  }
+  .bp-cell.searching{ border-color:var(--sub); color:var(--sub); animation: pulse .6s infinite alternate; }
+  .bp-cell.found{ border-color:var(--good); background:rgba(127,191,143,0.15); color:var(--good); }
+  @keyframes pulse{ from{opacity:0.5} to{opacity:1} }
+  .attack-log{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--text-dim);
+    margin-top:8px;
+    min-height:18px;
+  }
+  .cell.clickable{cursor:pointer;}
+  .cell.clickable:hover{transform:scale(1.06);}
+  .cell.selected{outline:2px solid var(--sub);outline-offset:2px;}
+
+  .sbox-explainer{
+    margin-top:16px;
+    padding-top:16px;
+    border-top:1px dashed var(--border);
+  }
+  .sbox-explainer .hint{
+    font-size:12.5px;
+    color:var(--text-dim);
+    margin:0 0 10px;
+  }
+  .sbox-explain-text{
+    font-family:var(--mono);
+    font-size:13px;
+    background:var(--panel2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:10px 12px;
+    margin-bottom:12px;
+    line-height:1.6;
+  }
+  .sbox-explain-text strong{color:var(--sub);}
+  .sbox-table-wrap{overflow-x:auto;padding-bottom:4px;}
+  .sbox-table{display:inline-block;}
+  .sbox-row{display:flex;}
+  .sbox-cell{
+    width:26px;height:22px;flex:0 0 26px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:10px;
+    border:1px solid var(--border);
+    color:var(--text-dim);
+    background:var(--panel2);
+  }
+  .sbox-corner{background:transparent;border:none;}
+  .sbox-rowhead,.sbox-colhead{font-weight:600;background:#1b1e29;}
+  .sbox-rowhead.hl,.sbox-colhead.hl{color:var(--sub);}
+  .sbox-val.hl-row,.sbox-val.hl-col{background:rgba(224,164,88,0.14);}
+  .sbox-val.hl-cell{background:var(--sub);color:#12141c;font-weight:700;}
+  footer{color:var(--text-dim);font-size:12px;margin-top:30px;font-family:var(--mono);}
+
+  .intro-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:14px;
+  }
+  @media (max-width:900px){.intro-grid{grid-template-columns:1fr 1fr;}}
+  @media (max-width:520px){.intro-grid{grid-template-columns:1fr;}}
+  .intro-card{
+    background:var(--panel2);
+    border:1px solid var(--border);
+    border-top:3px solid var(--border);
+    border-radius:10px;
+    padding:16px;
+  }
+  .intro-card.sub{border-top-color:var(--sub);}
+  .intro-card.shift{border-top-color:var(--shift);}
+  .intro-card.mix{border-top-color:var(--mix);}
+  .intro-card.ark{border-top-color:var(--ark);}
+  .intro-card .num{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--text-dim);
+    letter-spacing:0.1em;
+  }
+  .intro-card h4{
+    font-size:15.5px;
+    margin:6px 0 8px;
+    font-weight:600;
+  }
+  .intro-card p{
+    font-size:13.5px;
+    color:var(--text-dim);
+    margin:0 0 8px;
+  }
+  .intro-card .analogy{
+    font-size:12.5px;
+    color:var(--text);
+    background:rgba(255,255,255,0.03);
+    border-radius:6px;
+    padding:8px 10px;
+    border:1px dashed var(--border);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>How AES Work</h1>
+    <p>ดูตารางข้อมูลขนาด 4×4 ไบต์ เดินทางผ่าน SubBytes, ShiftRows, MixColumns และ AddRoundKey ทีละขั้นตอน จากนั้นดูว่าทำไมรหัสที่มีจำนวนรอบน้อยเกินไปถึงเผยกุญแจออกมาได้ง่ายๆ</p>
+  </header>
+
+  <div class="panel">
+    <h2>ปูพื้นฐานก่อนเริ่ม: 4 ขั้นตอนใน 1 รอบของ AES</h2>
+    <p style="color:var(--text-dim);font-size:14px;margin:-4px 0 16px;">
+      ข้อมูลขนาด 128 บิต (16 ไบต์) จะถูกจัดเรียงเป็นตารางขนาด 4×4 ไบต์ก่อน แล้วใน "1 รอบ" ข้อมูลทั้งตารางจะถูกจับไปแปลงรูปแบบด้วย 4 ขั้นตอนทางคณิตศาสตร์เรียงกันแบบนี้:
+    </p>
+    <div class="intro-grid">
+      <div class="intro-card sub">
+        <div class="num">ขั้นที่ 1</div>
+        <h4>SubBytes<br>(การแทนที่)</h4>
+        <p>เปลี่ยนทุกไบต์ในตารางด้วยไบต์อื่นตามตารางอ้างอิงที่ตายตัว (เรียกว่า S-box)</p>
+        <div class="analogy">เหมือนตารางโค้ดลับ: เอาไบต์เดิมไปเปิดตาราง แล้วได้ไบต์ใหม่มาแทนที่ ทำแบบนี้ทีละไบต์จนครบทั้ง 16 ไบต์</div>
+      </div>
+      <div class="intro-card shift">
+        <div class="num">ขั้นที่ 2</div>
+        <h4>ShiftRows<br>(การสลับแถว)</h4>
+        <p>เลื่อนไบต์ในแต่ละแถวของตารางไปทางซ้าย ด้วยระยะทางที่ไม่เท่ากัน</p>
+        <div class="analogy">แถวที่ 1 ไม่ขยับ, แถวที่ 2 เลื่อน 1 ช่อง, แถวที่ 3 เลื่อน 2 ช่อง, แถวที่ 4 เลื่อน 3 ช่อง (วนกลับมาต้นแถวเมื่อสุดขอบ)</div>
+      </div>
+      <div class="intro-card mix">
+        <div class="num">ขั้นที่ 3</div>
+        <h4>MixColumns<br>(การผสมคอลัมน์)</h4>
+        <p>นำไบต์ 4 ตัวในแต่ละคอลัมน์มาคูณกันทางคณิตศาสตร์ เพื่อผสมข้อมูลในคอลัมน์นั้นเข้าด้วยกัน</p>
+        <div class="analogy">คิดว่าเป็นการ "เขย่า" ข้อมูลในแนวตั้งของแต่ละคอลัมน์ ทำให้ไบต์แต่ละตัวมีอิทธิพลต่อไบต์อื่นในคอลัมน์เดียวกัน</div>
+      </div>
+      <div class="intro-card ark">
+        <div class="num">ขั้นที่ 4</div>
+        <h4>AddRoundKey<br>(การบวกกุญแจย่อย)</h4>
+        <p>นำตารางข้อมูลไปผสม (XOR) กับ "กุญแจย่อยประจำรอบ" ที่คำนวณมาจากกุญแจหลัก</p>
+        <div class="analogy">เป็นขั้นตอนเดียวที่ใช้กุญแจลับจริงๆ ส่วน 3 ขั้นตอนก่อนหน้าเป็นสูตรตายตัวที่ใครก็คำนวณตามได้</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>ตั้งค่าเริ่มต้น</h2>
+    <div class="controls-grid">
+      <div>
+        <label for="ptInput">ข้อมูลตั้งต้น / plaintext (16 ไบต์, hex)</label>
+        <input type="text" id="ptInput" maxlength="32" value="00112233445566778899aabbccddeeff">
+      </div>
+      <div>
+        <label for="keyInput">กุญแจหลัก / cipher key (16 ไบต์, hex)</label>
+        <input type="text" id="keyInput" maxlength="32" value="000102030405060708090a0b0c0d0e0f">
+      </div>
+      <div>
+        <label for="roundSel">จำนวนรอบที่จะรัน</label>
+        <select id="roundSel">
+          <option value="1">1 รอบ</option>
+          <option value="2">2 รอบ</option>
+          <option value="3" selected>3 รอบ</option>
+        </select>
+      </div>
+    </div>
+    <div class="err" id="errMsg"></div>
+    <div class="row-buttons" style="margin-top:14px;">
+      <button class="primary" id="startBtn">สร้างลำดับขั้นตอน</button>
+      <button id="randomBtn">สุ่มค่าใหม่</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>ดูขั้นตอนการคำนวณทีละสเต็ป</h2>
+    <div class="stage">
+      <div class="grids-row">
+        <div class="grid-block">
+          <div class="grid-label" id="gridLabelBefore">ก่อนการคำนวณ</div>
+          <div class="grid4" id="gridBefore"></div>
+        </div>
+        <div class="arrow-between">→</div>
+        <div class="grid-block">
+          <div class="grid-label" id="gridLabelAfter">ผลลัพธ์หลังการคำนวณ</div>
+          <div class="grid4" id="grid"></div>
+        </div>
+      </div>
+      <div class="step-panel">
+        <div class="step-tag" id="stepTag"><span class="dot ark"></span><span id="stepTagText">ยังไม่เริ่ม</span></div>
+        <h3 id="stepTitle">กด "สร้างลำดับขั้นตอน" เพื่อเริ่มต้น</h3>
+        <p id="stepDesc">กรอกกุญแจและข้อมูลตั้งต้นด้านบน เลือกจำนวนรอบ (สูงสุด 3 รอบ) แล้วกดปุ่ม Next เพื่อดูการแปลงข้อมูลทีละขั้นตอน</p>
+        <div class="math" id="stepMath" style="display:none;"></div>
+        <div class="sbox-explainer" id="sboxExplainer" style="display:none;">
+          <p class="hint">คลิกไบต์ตำแหน่งไหนก็ได้ในตาราง 4×4 ทางซ้าย เพื่อดูว่าไบต์นั้นถูกแปลงด้วย S-box อย่างไรจริงๆ</p>
+          <div class="sbox-explain-text" id="sboxExplainText"></div>
+          <div class="sbox-table-wrap"><div class="sbox-table" id="sboxTable"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="timeline" id="timeline"></div>
+    <div class="nav-row">
+      <div class="progress-text" id="progressText">ขั้นตอนที่ 0 / 0</div>
+      <div class="row-buttons">
+        <button id="prevBtn" disabled>← ก่อนหน้า</button>
+        <button id="nextBtn" class="primary" disabled>ถัดไป →</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="labPanel">
+    <div class="lab-toggle" id="labToggle">
+      <h2 style="margin:0;">ห้องทดลองดึงกุญแจ — AES แค่ 1 รอบ อ่อนแอแค่ไหน?</h2>
+      <span class="chev" id="labChev">▶</span>
+    </div>
+    <div class="lab-body" id="labBody">
+      <p style="color:var(--text-dim);font-size:14.5px;">
+        เนื่องจาก K0 และ K1 เชื่อมกันด้วย Key Schedule ที่ตายตัว (K1 = KeySchedule(K0))
+        สมการการเข้ารหัสจึงมีตัวแปรเดียวคือ K0:
+      </p>
+      <div class="math" style="margin-bottom:14px;">C = MixColumns(ShiftRows(SubBytes(P XOR K0))) XOR KeySchedule(K0)</div>
+      <p style="color:var(--text-dim);font-size:14.5px;">
+        ในห้องทดลองนี้ เราจำลองระบบที่ใช้ <strong style="color:var(--text);">กุญแจ 16 บิต</strong>
+        (2 ไบต์แรกของ K0 เท่านั้น ส่วนที่เหลือ 14 ไบต์กำหนดเป็น 0) —
+        ทำให้มีความเป็นไปได้ทั้งหมด 2<sup>16</sup> = 65,536 ค่า
+        ผู้โจมตีลองทุกค่าและเปรียบเทียบ C ที่ได้กับ C จริง
+      </p>
+      <p style="color:var(--text-dim);font-size:14.5px;">
+        <strong style="color:var(--sub);">ทำไมกุญแจ 128 บิตจริงถึงแยกทีละไบต์ไม่ได้?</strong>
+        MixColumns ผสมไบต์ข้ามตำแหน่งกัน ทำให้ K0 ทุกไบต์ส่งผลต่อ C พร้อมกัน
+        จึงต้องลองทั้ง 2<sup>128</sup> ≈ 3.4×10<sup>38</sup> ค่า — เป็นไปไม่ได้ในทางปฏิบัติ
+      </p>
+      <div class="kv">
+        <div>Plaintext P (รู้)</div><div class="hexline" id="labP">—</div>
+        <div>Ciphertext C (รู้)</div><div class="hexline" id="labC">—</div>
+        <div>Key 16 บิต (เป้าหมาย)</div><div class="hexline" id="labK0" style="color:var(--text-dim);">??? (กำลังจะค้นหา)</div>
+      </div>
+      <button class="primary" id="runAttackBtn">&#9654; เริ่มการโจมตี (65,536 ครั้ง)</button>
+      <div style="margin-top:14px;">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-bottom:6px;letter-spacing:0.06em;">ความคืบหน้า (0 – 65535)</div>
+        <div style="background:var(--panel2);border:1px solid var(--border);border-radius:6px;height:8px;overflow:hidden;margin-bottom:8px;">
+          <div id="progressBar" style="height:100%;width:0%;background:var(--ark);transition:width .1s;"></div>
+        </div>
+        <div class="attack-log" id="attackLog"></div>
+      </div>
+      <div class="attack-steps" id="attackSteps"></div>
+      <div class="verdict" id="verdict"></div>
+      <p style="color:var(--text-dim);font-size:13.5px;margin-top:20px;">
+        <strong style="color:var(--text);">ทำไม AES-128 จริงถึงปลอดภัย?</strong>
+        กุญแจ 128 บิตทำให้ต้องลองถึง 2<sup>128</sup> ≈ 3.4×10<sup>38</sup> ค่า
+        และแม้ว่าเราจะมีคอมพิวเตอร์เร็วที่สุดในโลก ก็ต้องใช้เวลานานกว่าอายุของจักรวาล
+        นอกจากนี้ AES จริงยังมี 10-14 รอบ ทำให้ไม่มีโครงสร้าง algebraic ที่จะช่วยลดจำนวนการค้นหาได้
+      </p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>ทำไมเป้าหมายของการโจมตีคือ "กุญแจ" ไม่ใช่ "ข้อความ"</h2>
+    <p style="color:var(--text-dim);font-size:14.5px;">
+      ในห้องทดลองด้านบน ผู้โจมตีเริ่มต้นรู้แค่ P กับ C
+      ข้อความ P ที่ถอดออกมาได้ไม่มีประโยชน์อะไร เพราะรู้อยู่แล้วว่ามันคืออะไร
+      สิ่งที่มีค่าคือ <strong>Master Key (K0)</strong> ที่กู้ออกมาได้จากการค้นหาแบบ byte-by-byte
+    </p>
+    <p style="color:var(--text-dim);font-size:14.5px;">
+      เมื่อได้ K0 มาแล้ว ผู้โจมตีคำนวณ K1 = KeySchedule(K0) ได้ทันที
+      จากนั้นสามารถถอด ciphertext <strong>ใหม่</strong> C′ ที่ไม่เคยเห็นมาก่อนได้ทุกข้อความ:
+      XOR กับ K1 → ผกผัน MixColumns → ผกผัน ShiftRows → ผกผัน SubBytes → XOR กับ K0
+    </p>
+    <p style="color:var(--text-dim);font-size:14.5px;">
+      การโจมตีแบบนี้เรียกว่า <strong>key-recovery attack</strong> — ต่างจากการถอดได้แค่ข้อความเดียวตรงที่:
+    </p>
+    <div class="kv" style="grid-template-columns:1fr 1fr;">
+      <div style="font-family:var(--sans);font-size:12.5px;text-transform:uppercase;letter-spacing:0.05em;">ถอดได้แค่ข้อความเดียว</div>
+      <div style="font-family:var(--sans);font-size:12.5px;text-transform:uppercase;letter-spacing:0.05em;">กู้ Master Key ได้</div>
+      <div class="hexline" style="font-family:var(--sans);">ใช้ได้กับ C นั้นเท่านั้น</div>
+      <div class="hexline" style="font-family:var(--sans);">ถอดได้ทุก C ที่เข้ารหัสด้วยกุญแจนี้ ทั้งอดีตและอนาคต</div>
+      <div class="hexline" style="font-family:var(--sans);">ต้องโจมตีใหม่ทุกครั้ง</div>
+      <div class="hexline" style="font-family:var(--sans);">ทำครั้งเดียว ใช้ได้ตลอดอายุของกุญแจ</div>
+      <div class="hexline" style="font-family:var(--sans);">ไม่กระทบระบบอื่น</div>
+      <div class="hexline" style="font-family:var(--sans);">ถ้ากุญแจถูกใช้ซ้ำในหลายระบบ → กระทบหมดทุกระบบ</div>
+    </div>
+    <p style="color:var(--text-dim);font-size:14.5px;margin-top:14px;">
+      สรุป: <strong>1 รอบอ่อนแอเพราะ SubBytes ทำทีละ 1 ไบต์ ทำให้แยกค้นหา 16 ไบต์อิสระกัน</strong>
+      รวมเพียง 4,096 ครั้ง — ทำได้ในเสี้ยววินาที
+      AES จริงปิดช่องโหว่นี้ด้วยการให้ MixColumns ผสมไบต์ข้ามกันก่อน SubBytes ในทุกรอบ
+      จนไม่สามารถแยกค้นหาทีละไบต์ได้อีกต่อไป
+    </p>
+  </div>
+
+  <footer>การคำนวณทั้งหมด (S-box, MixColumns บน GF(2⁸), Rijndael key schedule) รันอยู่ในเบราว์เซอร์ของคุณเท่านั้น ไม่มีการส่งข้อมูลไปที่ไหน</footer>
+</div>
+
+<script>
+// ---------- AES primitives ----------
+const SBOX = [
+  0x63,0x7c,0x77,0x7b,0xf2,0x6b,0x6f,0xc5,0x30,0x01,0x67,0x2b,0xfe,0xd7,0xab,0x76,
+  0xca,0x82,0xc9,0x7d,0xfa,0x59,0x47,0xf0,0xad,0xd4,0xa2,0xaf,0x9c,0xa4,0x72,0xc0,
+  0xb7,0xfd,0x93,0x26,0x36,0x3f,0xf7,0xcc,0x34,0xa5,0xe5,0xf1,0x71,0xd8,0x31,0x15,
+  0x04,0xc7,0x23,0xc3,0x18,0x96,0x05,0x9a,0x07,0x12,0x80,0xe2,0xeb,0x27,0xb2,0x75,
+  0x09,0x83,0x2c,0x1a,0x1b,0x6e,0x5a,0xa0,0x52,0x3b,0xd6,0xb3,0x29,0xe3,0x2f,0x84,
+  0x53,0xd1,0x00,0xed,0x20,0xfc,0xb1,0x5b,0x6a,0xcb,0xbe,0x39,0x4a,0x4c,0x58,0xcf,
+  0xd0,0xef,0xaa,0xfb,0x43,0x4d,0x33,0x85,0x45,0xf9,0x02,0x7f,0x50,0x3c,0x9f,0xa8,
+  0x51,0xa3,0x40,0x8f,0x92,0x9d,0x38,0xf5,0xbc,0xb6,0xda,0x21,0x10,0xff,0xf3,0xd2,
+  0xcd,0x0c,0x13,0xec,0x5f,0x97,0x44,0x17,0xc4,0xa7,0x7e,0x3d,0x64,0x5d,0x19,0x73,
+  0x60,0x81,0x4f,0xdc,0x22,0x2a,0x90,0x88,0x46,0xee,0xb8,0x14,0xde,0x5e,0x0b,0xdb,
+  0xe0,0x32,0x3a,0x0a,0x49,0x06,0x24,0x5c,0xc2,0xd3,0xac,0x62,0x91,0x95,0xe4,0x79,
+  0xe7,0xc8,0x37,0x6d,0x8d,0xd5,0x4e,0xa9,0x6c,0x56,0xf4,0xea,0x65,0x7a,0xae,0x08,
+  0xba,0x78,0x25,0x2e,0x1c,0xa6,0xb4,0xc6,0xe8,0xdd,0x74,0x1f,0x4b,0xbd,0x8b,0x8a,
+  0x70,0x3e,0xb5,0x66,0x48,0x03,0xf6,0x0e,0x61,0x35,0x57,0xb9,0x86,0xc1,0x1d,0x9e,
+  0xe1,0xf8,0x98,0x11,0x69,0xd9,0x8e,0x94,0x9b,0x1e,0x87,0xe9,0xce,0x55,0x28,0xdf,
+  0x8c,0xa1,0x89,0x0d,0xbf,0xe6,0x42,0x68,0x41,0x99,0x2d,0x0f,0xb0,0x54,0xbb,0x16
+];
+const RCON = [0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0x1b,0x36];
+
+function gmul(a,b){
+  let p=0;
+  for(let i=0;i<8;i++){
+    if(b & 1) p ^= a;
+    const hi = a & 0x80;
+    a = (a<<1) & 0xff;
+    if(hi) a ^= 0x1b;
+    b >>= 1;
+  }
+  return p;
+}
+
+function subBytesArr(state){ return state.map(b=>SBOX[b]); }
+
+function shiftRowsArr(state){
+  // state index = r + 4*c
+  const out = new Array(16);
+  for(let r=0;r<4;r++){
+    for(let c=0;c<4;c++){
+      out[r+4*c] = state[r+4*((c+r)%4)];
+    }
+  }
+  return out;
+}
+
+function mixColumnsArr(state){
+  const out = new Array(16);
+  for(let c=0;c<4;c++){
+    const c0=state[4*c], c1=state[4*c+1], c2=state[4*c+2], c3=state[4*c+3];
+    out[4*c]   = gmul(c0,2) ^ gmul(c1,3) ^ c2 ^ c3;
+    out[4*c+1] = c0 ^ gmul(c1,2) ^ gmul(c2,3) ^ c3;
+    out[4*c+2] = c0 ^ c1 ^ gmul(c2,2) ^ gmul(c3,3);
+    out[4*c+3] = gmul(c0,3) ^ c1 ^ c2 ^ gmul(c3,2);
+  }
+  return out;
+}
+
+function addRoundKeyArr(state, rk){ return state.map((b,i)=>b ^ rk[i]); }
+
+function keyExpansion(keyBytes, totalWords){
+  const w = [];
+  for(let i=0;i<4;i++) w.push(keyBytes.slice(i*4,i*4+4));
+  let rconIdx=0;
+  for(let i=4;i<totalWords;i++){
+    let temp = w[i-1].slice();
+    if(i % 4 === 0){
+      temp = [temp[1],temp[2],temp[3],temp[0]]; // RotWord
+      temp = temp.map(b=>SBOX[b]);               // SubWord
+      temp[0] ^= RCON[rconIdx]; rconIdx++;
+    }
+    const word = w[i-4].map((b,j)=>b ^ temp[j]);
+    w.push(word);
+  }
+  return w; // array of 4-byte words
+}
+
+function wordsToRoundKey(w, roundIdx){
+  // roundIdx 0..Nr -> words [4*roundIdx .. 4*roundIdx+3], flattened column-major (matches state indexing)
+  return [].concat(w[4*roundIdx],w[4*roundIdx+1],w[4*roundIdx+2],w[4*roundIdx+3]);
+}
+
+function hexToBytes(hex){
+  hex = hex.trim().toLowerCase().replace(/[^0-9a-f]/g,'');
+  if(hex.length !== 32) return null;
+  const out = [];
+  for(let i=0;i<32;i+=2) out.push(parseInt(hex.substr(i,2),16));
+  return out;
+}
+function bytesToHex(bytes){ return bytes.map(b=>b.toString(16).padStart(2,'0')).join(''); }
+function randomHexBlock(){
+  let s='';
+  for(let i=0;i<16;i++) s += Math.floor(Math.random()*256).toString(16).padStart(2,'0');
+  return s;
+}
+
+// ---------- Timeline builder ----------
+let timeline = [];   // {state, opClass, tagText, title, desc, math, dotClass, round}
+let tlIndex = -1;
+let lastValidKeyBytes = null, lastValidPtBytes = null, lastRounds = 0, lastW = null;
+
+function buildTimeline(){
+  const errEl = document.getElementById('errMsg');
+  errEl.textContent = '';
+  const ptBytes = hexToBytes(document.getElementById('ptInput').value);
+  const keyBytes = hexToBytes(document.getElementById('keyInput').value);
+  const rounds = parseInt(document.getElementById('roundSel').value,10);
+  if(!ptBytes){ errEl.textContent='ข้อมูลตั้งต้นต้องเป็นเลขฐาน 16 (hex) ยาวพอดี 32 ตัวอักษร (16 ไบต์)'; return; }
+  if(!keyBytes){ errEl.textContent='กุญแจต้องเป็นเลขฐาน 16 (hex) ยาวพอดี 32 ตัวอักษร (16 ไบต์)'; return; }
+
+  const w = keyExpansion(keyBytes, 4*(rounds+1));
+  timeline = [];
+  let state = ptBytes.slice();
+
+  const k0 = wordsToRoundKey(w,0);
+  state = addRoundKeyArr(state, k0);
+  timeline.push({
+    prevState: ptBytes.slice(), state: state.slice(), opClass:'op-ark', dotClass:'init',
+    tagText:'ขั้นเตรียมการ (Whitening)', title:'AddRoundKey — ก่อนเริ่มรอบที่ 1',
+    desc:'ก่อนที่รอบใดๆ จะเริ่ม ข้อมูลตั้งต้นจะถูก XOR กับกุญแจย่อยตัวแรก (K0) หนึ่งครั้งก่อน ขั้นตอนนี้เรียกว่า key whitening',
+    math:'state = plaintext ⊕ K0\\nK0 = '+bytesToHex(k0)
+  });
+
+  for(let r=1;r<=rounds;r++){
+    const rk = wordsToRoundKey(w,r);
+
+    let s1 = subBytesArr(state);
+    timeline.push({
+      prevState:state.slice(), state:s1.slice(), opClass:'op-sub', dotClass:'sub', round:r,
+      tagText:'รอบที่ '+r+' · ขั้นที่ 1 / 4', title:'SubBytes (การแทนที่)',
+      desc:'ทุกไบต์ในตารางถูกเปลี่ยนเป็นไบต์อื่นตามตารางอ้างอิงที่ตายตัว (S-box) — เหมือนตารางโค้ดลับ นี่เป็นขั้นตอนเดียวใน AES ที่ไม่เป็นเชิงเส้น (non-linear) ทำให้ทำลายความสัมพันธ์ทางพีชคณิตง่ายๆ ระหว่างข้อมูลเข้ากับข้อมูลออก',
+      math:'state[i] = SBOX[state[i]]  สำหรับทุกไบต์ทั้ง 16 ตัว'
+    });
+    state = s1;
+
+    let s2 = shiftRowsArr(state);
+    timeline.push({
+      prevState:state.slice(), state:s2.slice(), opClass:'op-shift', dotClass:'shift', round:r,
+      tagText:'รอบที่ '+r+' · ขั้นที่ 2 / 4', title:'ShiftRows (การสลับแถว)',
+      desc:'แถวที่ 0 ไม่ขยับ, แถวที่ 1 เลื่อนซ้าย 1 ช่อง, แถวที่ 2 เลื่อน 2 ช่อง, แถวที่ 3 เลื่อน 3 ช่อง (แบบวนรอบ) การเลื่อนนี้กระจายไบต์ข้ามคอลัมน์ เพื่อให้ขั้นตอนถัดไปผสมไบต์เหล่านี้เข้ากับไบต์ที่มาจากที่อื่นได้',
+      math:'แถว r → เลื่อนซ้าย r ตำแหน่ง (r = 0..3)'
+    });
+    state = s2;
+
+    let s3 = mixColumnsArr(state);
+    timeline.push({
+      prevState:state.slice(), state:s3.slice(), opClass:'op-mix', dotClass:'mix', round:r,
+      tagText:'รอบที่ '+r+' · ขั้นที่ 3 / 4', title:'MixColumns (การผสมคอลัมน์)',
+      desc:'ไบต์ 4 ตัวในแต่ละคอลัมน์ถูกมองเป็นพหุนาม แล้วนำไปคูณกับเมทริกซ์ค่าคงที่ในฟิลด์ GF(2⁸) เมื่อรวมกับ ShiftRows แล้ว จะรับประกันว่าหลังผ่านไป 2 รอบ ทุกไบต์ของผลลัพธ์จะขึ้นอยู่กับทุกไบต์ของข้อมูลตั้งต้น',
+      math:'[2 3 1 1]\\n[1 2 3 1]  ×  คอลัมน์   (คำนวณในฟิลด์ GF(2⁸))\\n[1 1 2 3]\\n[3 1 1 2]'
+    });
+    state = s3;
+
+    let s4 = addRoundKeyArr(state, rk);
+    timeline.push({
+      prevState:state.slice(), state:s4.slice(), opClass:'op-ark', dotClass:'ark', round:r,
+      tagText:'รอบที่ '+r+' · ขั้นที่ 4 / 4', title:'AddRoundKey (การบวกกุญแจย่อย)',
+      desc:'กุญแจย่อยประจำรอบนี้ (ที่คำนวณมาจากกุญแจหลักผ่าน Rijndael key schedule) จะถูกนำไป XOR กับตารางข้อมูล นี่เป็นขั้นตอนเดียวในทั้ง 4 ขั้นตอนที่ใช้กุญแจลับจริงๆ',
+      math:'state = state ⊕ K'+r+'\\nK'+r+' = '+bytesToHex(rk)
+    });
+    state = s4;
+  }
+
+  lastValidKeyBytes = keyBytes; lastValidPtBytes = ptBytes; lastRounds = rounds; lastW = w;
+  tlIndex = 0;
+  renderTimelineDots();
+  renderStep(0, null);
+  document.getElementById('prevBtn').disabled = true;
+  document.getElementById('nextBtn').disabled = (timeline.length<=1);
+  updateProgress();
+  setupLab();
+}
+
+function renderTimelineDots(){
+  const tl = document.getElementById('timeline');
+  tl.innerHTML='';
+  timeline.forEach((step,i)=>{
+    const d = document.createElement('div');
+    d.className = 'tl-dot ' + step.dotClass + (i<=tlIndex?' done':'') + (i===tlIndex?' active':'');
+    d.title = step.title;
+    d.addEventListener('click', ()=>{
+      tlIndex = i;
+      renderStep(i, null);
+      renderTimelineDots();
+      updateProgress();
+      document.getElementById('prevBtn').disabled = (tlIndex===0);
+      document.getElementById('nextBtn').disabled = (tlIndex===timeline.length-1);
+    });
+    tl.appendChild(d);
+  });
+}
+
+function renderStep(idx, prevIdx){
+  const step = timeline[idx];
+  const prevState = step.prevState || null;
+
+  // ---- BEFORE grid ----
+  const gridBefore = document.getElementById('gridBefore');
+  gridBefore.innerHTML = '';
+  const srcState = prevState || step.state;
+  for(let r=0;r<4;r++){
+    for(let c=0;c<4;c++){
+      const i = r+4*c;
+      const cell = document.createElement('div');
+      cell.className = 'cell before-cell';
+      if(!prevState) cell.style.opacity='0.25';
+      cell.textContent = srcState[i].toString(16).padStart(2,'0');
+      gridBefore.appendChild(cell);
+    }
+  }
+
+  // ---- AFTER grid ----
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  for(let r=0;r<4;r++){
+    for(let c=0;c<4;c++){
+      const i = r+4*c;
+      const cell = document.createElement('div');
+      const changed = prevState ? (prevState[i] !== step.state[i]) : true;
+      cell.className = 'cell ' + step.opClass + (changed ? ' changed' : '');
+      cell.textContent = step.state[i].toString(16).padStart(2,'0');
+      if(step.opClass === 'op-sub' && prevState){
+        cell.classList.add('clickable');
+        cell.addEventListener('click', ()=> showSboxExample(i, prevState, step.state));
+      }
+      grid.appendChild(cell);
+    }
+  }
+
+  // ---- labels ----
+  const lblAfter = document.getElementById('gridLabelAfter');
+  if(lblAfter){
+    lblAfter.textContent = step.title;
+    lblAfter.className = 'grid-label ' + step.opClass;
+  }
+
+  document.getElementById('stepTag').innerHTML = '<span class="dot '+step.dotClass+'"></span><span>'+step.tagText+'</span>';
+  document.getElementById('stepTitle').textContent = step.title;
+  document.getElementById('stepDesc').textContent = step.desc;
+  const mathEl = document.getElementById('stepMath');
+  mathEl.style.display = 'block';
+  mathEl.textContent = step.math.replace(/\\n/g,'\n');
+  const explainer = document.getElementById('sboxExplainer');
+  if(step.opClass === 'op-sub' && prevState){
+    buildSboxTable();
+    explainer.style.display = 'block';
+    showSboxExample(0, prevState, step.state);
+  } else {
+    explainer.style.display = 'none';
+  }
+}
+function buildSboxTable(){
+  const el = document.getElementById('sboxTable');
+  if(el.childElementCount) return; // build once, reuse afterwards
+  let html = '<div class="sbox-row"><div class="sbox-cell sbox-corner"></div>';
+  for(let c=0;c<16;c++) html += '<div class="sbox-cell sbox-colhead" data-col="'+c+'">'+c.toString(16)+'</div>';
+  html += '</div>';
+  for(let r=0;r<16;r++){
+    html += '<div class="sbox-row"><div class="sbox-cell sbox-rowhead" data-row="'+r+'">'+r.toString(16)+'</div>';
+    for(let c=0;c<16;c++){
+      const val = SBOX[r*16+c];
+      html += '<div class="sbox-cell sbox-val" data-row="'+r+'" data-col="'+c+'">'+val.toString(16).padStart(2,'0')+'</div>';
+    }
+    html += '</div>';
+  }
+  el.innerHTML = html;
+}
+
+function showSboxExample(idx, beforeState, afterState){
+  document.querySelectorAll('#grid .cell').forEach(c=>c.classList.remove('selected'));
+  const cellEls = document.querySelectorAll('#grid .cell');
+  if(cellEls[idx]) cellEls[idx].classList.add('selected');
+
+  const inputByte = beforeState[idx];
+  const outputByte = afterState[idx];
+  const hi = inputByte >> 4;
+  const lo = inputByte & 0xf;
+
+  document.querySelectorAll('.sbox-val').forEach(c=>c.classList.remove('hl-row','hl-col','hl-cell'));
+  document.querySelectorAll('.sbox-rowhead').forEach(c=>c.classList.remove('hl'));
+  document.querySelectorAll('.sbox-colhead').forEach(c=>c.classList.remove('hl'));
+
+  document.querySelectorAll('.sbox-val[data-row="'+hi+'"]').forEach(c=>c.classList.add('hl-row'));
+  document.querySelectorAll('.sbox-val[data-col="'+lo+'"]').forEach(c=>c.classList.add('hl-col'));
+  const cellEl = document.querySelector('.sbox-val[data-row="'+hi+'"][data-col="'+lo+'"]');
+  if(cellEl) cellEl.classList.add('hl-cell');
+  const rowHeadEl = document.querySelector('.sbox-rowhead[data-row="'+hi+'"]');
+  const colHeadEl = document.querySelector('.sbox-colhead[data-col="'+lo+'"]');
+  if(rowHeadEl) rowHeadEl.classList.add('hl');
+  if(colHeadEl) colHeadEl.classList.add('hl');
+
+  document.getElementById('sboxExplainText').innerHTML =
+    'ไบต์ที่เลือก = <strong>0x'+inputByte.toString(16).padStart(2,'0')+'</strong>'
+    +' → แยกเป็นเลขฐาน 16 สองหลัก: หลักสูง = แถว <strong>'+hi.toString(16)+'</strong>, หลักต่ำ = คอลัมน์ <strong>'+lo.toString(16)+'</strong><br>'
+    +'เปิดตาราง S-box ที่ (แถว '+hi.toString(16)+', คอลัมน์ '+lo.toString(16)+') → ได้ผลลัพธ์ = <strong>0x'+outputByte.toString(16).padStart(2,'0')+'</strong>';
+}
+
+function updateProgress(){
+  document.getElementById('progressText').textContent = 'ขั้นตอนที่ '+(tlIndex+1)+' / '+timeline.length;
+}
+
+function inverseKeyScheduleOneRound(roundWords, roundIndex){
+  var wa=roundWords[0], wb=roundWords[1], wc=roundWords[2], wd=roundWords[3];
+  var wdP=wd.map(function(b,j){return b^wc[j];});
+  var wcP=wc.map(function(b,j){return b^wb[j];});
+  var wbP=wb.map(function(b,j){return b^wa[j];});
+  var rot=[wdP[1],wdP[2],wdP[3],wdP[0]];
+  var sub=rot.map(function(b){return SBOX[b];});
+  var waP=wa.map(function(b,j){return b^sub[j]^(j===0?RCON[roundIndex-1]:0);});
+  return [waP,wbP,wcP,wdP];
+}
+
+function roundKeyToWords(rk){
+  return [0,1,2,3].map(function(col){return rk.slice(col*4,col*4+4);});
+}
+
+document.getElementById('startBtn').addEventListener('click', buildTimeline);
+document.getElementById('randomBtn').addEventListener('click', ()=>{
+  document.getElementById('ptInput').value = randomHexBlock();
+  document.getElementById('keyInput').value = randomHexBlock();
+});
+
+document.getElementById('nextBtn').addEventListener('click', ()=>{
+  if(tlIndex < timeline.length-1){
+    tlIndex++;
+    renderStep(tlIndex, null);
+    renderTimelineDots();
+    updateProgress();
+    document.getElementById('prevBtn').disabled = false;
+    document.getElementById('nextBtn').disabled = (tlIndex===timeline.length-1);
+  }
+});
+document.getElementById('prevBtn').addEventListener('click', ()=>{
+  if(tlIndex > 0){
+    tlIndex--;
+    renderStep(tlIndex, null);
+    renderTimelineDots();
+    updateProgress();
+    document.getElementById('prevBtn').disabled = (tlIndex===0);
+    document.getElementById('nextBtn').disabled = false;
+  }
+});
+
+// ---------- Key-recovery lab ----------
+document.getElementById('labToggle').addEventListener('click', ()=>{
+  const body = document.getElementById('labBody');
+  const chev = document.getElementById('labChev');
+  body.classList.toggle('open');
+  chev.classList.toggle('open');
+});
+
+function setupLab(){
+  if(!lastW) return;
+
+  // Use a REDUCED 16-bit key for the demo: only first 2 bytes of K0 are non-zero.
+  // This gives 2^16 = 65536 possibilities — exhaustible in the browser.
+  var k0Full = wordsToRoundKey(lastW, 0);          // true full K0
+  var k0Demo = k0Full.slice();
+  // Zero out bytes 2-15 so only the first 2 bytes matter
+  for(var zz=2;zz<16;zz++) k0Demo[zz]=0;
+  // Recompute K1 from the reduced K0
+  var wDemo = keyExpansion(k0Demo, 8);
+  var k1Demo = wordsToRoundKey(wDemo, 1);
+
+  var p = lastValidPtBytes;
+  var afterWhiten = addRoundKeyArr(p, k0Demo);
+  var c = addRoundKeyArr(mixColumnsArr(shiftRowsArr(subBytesArr(afterWhiten))), k1Demo);
+
+  // Show attacker's info: only P and C (no key)
+  document.getElementById('labP').textContent  = bytesToHex(p);
+  document.getElementById('labC').textContent  = bytesToHex(c);
+  document.getElementById('labK0').textContent = '??? (กำลังจะค้นหา)';
+  document.getElementById('attackSteps').innerHTML = '';
+  document.getElementById('verdict').style.display = 'none';
+  document.getElementById('attackLog').textContent = '';
+
+  var bar = document.getElementById('progressBar');
+  if(bar) bar.style.width = '0%';
+
+  // The 2-byte "short key" that the attacker is looking for
+  var shortKeyTrue = (k0Demo[0] << 8) | k0Demo[1];
+
+  document.getElementById('runAttackBtn').onclick = function(){
+    document.getElementById('runAttackBtn').disabled = true;
+    var attackLog = document.getElementById('attackLog');
+    var verdictEl = document.getElementById('verdict');
+    var stepsEl   = document.getElementById('attackSteps');
+    stepsEl.innerHTML = '';
+    verdictEl.style.display = 'none';
+    if(bar) bar.style.width = '0%';
+
+    var guess = 0;
+    var TOTAL = 65536;
+    var BATCH = 512;  // tries per animation frame
+
+    function step(){
+      var limit = Math.min(guess + BATCH, TOTAL);
+      for(; guess < limit; guess++){
+        // Build candidate K0: first 2 bytes = guess, rest = 0
+        var b0 = (guess >> 8) & 0xff;
+        var b1 = guess & 0xff;
+        var candidate = [b0, b1, 0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0];
+        var wCand = keyExpansion(candidate, 8);
+        var k1Cand = wordsToRoundKey(wCand, 1);
+        var aw = addRoundKeyArr(p, candidate);
+        var cCand = addRoundKeyArr(mixColumnsArr(shiftRowsArr(subBytesArr(aw))), k1Cand);
+        if(bytesToHex(cCand) === bytesToHex(c)){
+          // Found!
+          var pct = Math.round(guess/TOTAL*100);
+          if(bar) bar.style.width = pct+'%';
+          attackLog.textContent = 'พบกุญแจหลังจากลอง '+guess+' ครั้ง ('+pct+'% ของทั้งหมด)';
+
+          function addStep(lbl, txt){
+            var d = document.createElement('div');
+            d.className = 'attack-step shown';
+            d.innerHTML = '<span class="lbl">'+lbl+'</span>'
+                        + '<span style="white-space:pre;font-size:12px;display:block;margin-top:4px;">'+txt+'</span>';
+            stepsEl.appendChild(d);
+          }
+
+          addStep('ผลการค้นหา brute-force ('+guess+' ครั้ง จาก 65,536)',
+                  'Key 16 บิต ที่พบ = 0x'+b0.toString(16).padStart(2,'0')+b1.toString(16).padStart(2,'0')+'\nK0 เต็ม (16 ไบต์) = '+bytesToHex(candidate));
+          var wFinal = keyExpansion(candidate, 8);
+          var k1Final = wordsToRoundKey(wFinal, 1);
+          addStep('คำนวณ K1 = KeySchedule(K0) ได้ทันที',
+                  'K1 = '+bytesToHex(k1Final));
+          var cCheck = addRoundKeyArr(mixColumnsArr(shiftRowsArr(subBytesArr(addRoundKeyArr(p,candidate)))),k1Final);
+          addStep('ตรวจสอบ: เข้ารหัสด้วย K0, K1 ที่กู้ได้',
+                  'C จริง       = '+bytesToHex(c)+'\nC คำนวณได้   = '+bytesToHex(cCheck));
+
+          var match = bytesToHex(candidate) === bytesToHex(k0Demo);
+          verdictEl.style.display = 'block';
+          verdictEl.innerHTML = match
+            ? '&#10003; <strong>ตรงกัน!</strong> กู้กุญแจสำเร็จใน <strong>'+guess+' ครั้ง</strong>'
+              + ' (จาก 65,536 ที่เป็นไปได้)<br><br>'
+              + 'ถ้าใช้กุญแจ <strong>128 บิต</strong> จริง ต้องลองถึง '
+              + '2<sup>128</sup> &#8776; 3.4&#215;10<sup>38</sup> ครั้ง<br>'
+              + '&#8594; เป็นไปไม่ได้ในทางปฏิบัติ นี่คือเหตุผลที่ AES-128 ปลอดภัย'
+            : 'ผลลัพธ์ไม่ตรงกัน — ลองสร้างลำดับขั้นตอนใหม่';
+
+          document.getElementById('labK0').textContent = bytesToHex(candidate);
+          document.getElementById('runAttackBtn').disabled = false;
+          guess = TOTAL; // stop
+          return;
+        }
+      }
+
+      if(guess < TOTAL){
+        var pct = Math.round(guess/TOTAL*100);
+        if(bar) bar.style.width = pct+'%';
+        attackLog.textContent = 'กำลังลอง 0x'+guess.toString(16).padStart(4,'0')+'... ('+guess+'/'+TOTAL+')';
+        requestAnimationFrame(step);
+      } else {
+        attackLog.textContent = 'ค้นหาครบทุกค่าแล้ว ไม่พบคำตอบ — ลองสร้างลำดับขั้นตอนใหม่';
+        document.getElementById('runAttackBtn').disabled = false;
+      }
+    }
+
+    requestAnimationFrame(step);
+  };
+}
+
+// build an initial timeline on load with the defaults
+buildTimeline();
+</script>
+</body>
+</html>
