@@ -48,4 +48,4 @@ Anthropic ได้เปิดเผยงานวิจัยว่าโม�
   </a>
 </p>
 
-<img alt="AI Tensibility Post Image" src="/assets/images/2026-08-02_01.png" class="post-image" loading="lazy">
+<img alt="AI Tensibility Post Image" src="{{ 'assets/images/2026-08-02_01.png' | relative_url}}" class="post-image" loading="lazy">
